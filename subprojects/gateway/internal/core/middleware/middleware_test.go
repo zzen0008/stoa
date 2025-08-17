@@ -3,12 +3,12 @@ package middleware
 import (
 	"bytes"
 	"io"
-	"log"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 // TestStreamInterceptor ensures the body is read correctly and the onCompletion function is called.
@@ -49,8 +49,10 @@ func TestStreamInterceptor(t *testing.T) {
 func TestElasticCompletionLogger(t *testing.T) {
 	// Capture log output
 	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer log.SetOutput(os.Stderr) // Restore original logger
+	logrus.SetOutput(&buf)
+	logrus.SetFormatter(&logrus.TextFormatter{
+		DisableTimestamp: true,
+	})
 
 	// Create a mock response
 	resp := &http.Response{
@@ -65,7 +67,7 @@ func TestElasticCompletionLogger(t *testing.T) {
 	}
 
 	// Check the initial log message
-	expectedInitialLog := "Response from downstream: status 200\n"
+	expectedInitialLog := `level=info msg="Response from downstream: status 200"`
 	if !strings.Contains(buf.String(), expectedInitialLog) {
 		t.Errorf("Initial log was incorrect, got: %q, want to contain: %q", buf.String(), expectedInitialLog)
 	}
@@ -76,7 +78,7 @@ func TestElasticCompletionLogger(t *testing.T) {
 	onCompletion(completionBody)
 
 	// Check the completion log message
-	expectedCompletionLog := "STREAM COMPLETE. Logging to Elastic: This is the completion body.\n"
+	expectedCompletionLog := `level=info msg="STREAM COMPLETE. Logging to Elastic: This is the completion body."`
 	if !strings.Contains(buf.String(), expectedCompletionLog) {
 		t.Errorf("Completion log was incorrect, got: %q, want to contain: %q", buf.String(), expectedCompletionLog)
 	}

@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Middleware is a function that takes an http.Handler and returns a new http.Handler.
@@ -21,11 +22,11 @@ func Chain(middlewares ...Middleware) Middleware {
 
 // Manager holds dependencies for transport-layer middleware.
 type Manager struct {
-	Logger *log.Logger
+	Logger *logrus.Logger
 }
 
 // NewManager creates a new Manager.
-func NewManager(logger *log.Logger) *Manager {
+func NewManager(logger *logrus.Logger) *Manager {
 	return &Manager{
 		Logger: logger,
 	}
@@ -34,7 +35,7 @@ func NewManager(logger *log.Logger) *Manager {
 // Logging logs the incoming HTTP request.
 func (m *Manager) Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		m.Logger.Printf("received request: %s %s", r.Method, r.URL.Path)
+		m.Logger.Infof("received request: %s %s", r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
 }

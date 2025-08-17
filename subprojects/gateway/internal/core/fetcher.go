@@ -6,9 +6,10 @@ import (
 	"io"
 	"llm-gateway/internal/config"
 	"llm-gateway/internal/core/provider"
-	"log"
 	"net/http"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ModelFetcher is responsible for periodically fetching models from all providers.
@@ -31,7 +32,7 @@ func NewModelFetcher(pm *provider.Manager, mc *ModelsCache, refreshInterval time
 
 // Start begins the periodic fetching of models.
 func (mf *ModelFetcher) Start() {
-	log.Println("Starting model fetcher...")
+	logrus.Println("Starting model fetcher...")
 	// Fetch immediately on start
 	mf.fetchAllModels()
 
@@ -54,7 +55,7 @@ func (mf *ModelFetcher) Stop() {
 }
 
 func (mf *ModelFetcher) fetchAllModels() {
-	log.Println("Fetching models from all providers...")
+	logrus.Println("Fetching models from all providers...")
 	providers := mf.providerManager.GetAllProviderConfigs()
 	for _, p := range providers {
 		if p.Enabled {
@@ -66,13 +67,13 @@ func (mf *ModelFetcher) fetchAllModels() {
 func (mf *ModelFetcher) fetchModelsForProvider(p config.Provider) {
 	client := mf.providerManager.GetClient(p.Name)
 	if client == nil {
-		log.Printf("Failed to get client for provider: %s", p.Name)
+		logrus.Printf("Failed to get client for provider: %s", p.Name)
 		return
 	}
 
 	req, err := http.NewRequest("GET", p.TargetURL+"/v1/models", nil)
 	if err != nil {
-		log.Printf("Error creating request for provider %s: %v", p.Name, err)
+		logrus.Printf("Error creating request for provider %s: %v", p.Name, err)
 		return
 	}
 
@@ -83,25 +84,25 @@ func (mf *ModelFetcher) fetchModelsForProvider(p config.Provider) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Error fetching models from provider %s: %v", p.Name, err)
+		logrus.Printf("Error fetching models from provider %s: %v", p.Name, err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Provider %s returned non-200 status: %d", p.Name, resp.StatusCode)
+		logrus.Printf("Provider %s returned non-200 status: %d", p.Name, resp.StatusCode)
 		return
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error reading response body from provider %s: %v", p.Name, err)
+		logrus.Printf("Error reading response body from provider %s: %v", p.Name, err)
 		return
 	}
 
 	var providerModelsList ProviderModelsList
 	if err := json.Unmarshal(body, &providerModelsList); err != nil {
-		log.Printf("Error unmarshaling models from provider %s: %v", p.Name, err)
+		logrus.Printf("Error unmarshaling models from provider %s: %v", p.Name, err)
 		return
 	}
 
@@ -118,5 +119,5 @@ func (mf *ModelFetcher) fetchModelsForProvider(p config.Provider) {
 	}
 
 	mf.modelsCache.SetModels(p.Name, namespacedModels)
-	log.Printf("Successfully fetched and updated %d models for provider: %s", len(namespacedModels), p.Name)
+	logrus.Printf("Successfully fetched and updated %d models for provider: %s", len(namespacedModels), p.Name)
 }

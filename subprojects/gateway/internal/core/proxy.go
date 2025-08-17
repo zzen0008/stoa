@@ -7,12 +7,13 @@ import (
 	coremw "llm-gateway/internal/core/middleware"
 	"llm-gateway/internal/core/provider"
 	"llm-gateway/internal/core/router"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"path"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 // modifyRequestBody rewrites the model name in the request body and returns the new body and the translated model name.
@@ -83,7 +84,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for _, providerName := range strategy.Providers {
 		providerConfig, ok := p.providerManager.GetConfig(providerName)
 		if !ok {
-			log.Printf("Provider '%s' not found or not enabled", providerName)
+			logrus.Warnf("Provider '%s' not found or not enabled", providerName)
 			continue
 		}
 
@@ -98,7 +99,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		targetURL, err := url.Parse(providerConfig.TargetURL)
 		if err != nil {
-			log.Printf("Error parsing target URL for provider %s: %v", providerName, err)
+			logrus.Errorf("Error parsing target URL for provider %s: %v", providerName, err)
 			continue
 		}
 
@@ -116,7 +117,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				onCompletion, err := p.responseMiddleware(resp)
 				if err != nil {
-					// TODO: Should probably log this error.
+					logrus.Errorf("Error in response middleware: %v", err)
 					return err
 				}
 				if onCompletion != nil {
@@ -127,12 +128,11 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Log the detailed routing information
-		log.Printf(
-			`Routing request: model="%s" -> provider="%s" as model="%s"`,
-			reqBody.Model,
-			providerName,
-			translatedModel,
-		)
+		logrus.WithFields(logrus.Fields{
+			"original_model": reqBody.Model,
+			"provider":       providerName,
+			"translated_model": translatedModel,
+		}).Info("Routing request")
 
 		proxy.ServeHTTP(w, r)
 		// This is a simplification. A real implementation would need to inspect

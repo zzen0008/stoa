@@ -3,8 +3,9 @@ package middleware
 import (
 	"bytes"
 	"io"
-	"log"
 	"net/http"
+
+	"github.com/sirupsen/logrus"
 )
 
 // OnCompletionFunc is a function that will be executed when a stream completes.
@@ -56,12 +57,12 @@ func (si *StreamInterceptor) Close() error {
 func ElasticCompletionLogger(resp *http.Response) (OnCompletionFunc, error) {
 	// This function is the middleware itself. It runs before the stream starts.
 	// We can inspect headers here, for example.
-	log.Printf("Response from downstream: status %d", resp.StatusCode)
+	logrus.Infof("Response from downstream: status %d", resp.StatusCode)
 
 	// We return a function that will be called ONLY when the stream is complete.
 	onCompletion := func(body []byte) {
 		// This is where you would send the data to Elasticsearch.
-		log.Printf("STREAM COMPLETE. Logging to Elastic: %s", string(body))
+		logrus.Infof("STREAM COMPLETE. Logging to Elastic: %s", string(body))
 	}
 
 	return onCompletion, nil

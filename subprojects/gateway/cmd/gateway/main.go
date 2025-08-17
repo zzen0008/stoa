@@ -7,23 +7,22 @@ import (
 	coremw "llm-gateway/internal/core/middleware"
 	"llm-gateway/internal/core/provider"
 	"llm-gateway/internal/core/router"
+	"llm-gateway/internal/logging"
 	"llm-gateway/internal/transport/handlers"
 	transportmw "llm-gateway/internal/transport/middleware"
-	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
 func main() {
 	// 1. Load Configuration
+	logger := logging.NewLogger()
 	cfg, err := config.Load("config.yaml")
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		logger.Fatalf("Failed to load configuration: %v", err)
 	}
 
 	// 2. Initialize Components
-	logger := log.New(os.Stdout, "", log.LstdFlags)
 	providerManager := provider.NewManager(cfg.Providers)
 	modelsCache := core.NewModelsCache()
 	coreRouter := router.NewRouter(cfg.Strategies)
@@ -48,10 +47,10 @@ func main() {
 	chainedHandler := transportmw.Chain(loggingMiddleware)(mux)
 
 	serverAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	log.Printf("Starting server on %s", serverAddr)
+	logger.Infof("Starting server on %s", serverAddr)
 
 	// 5. Start the Server
 	if err := http.ListenAndServe(serverAddr, chainedHandler); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		logger.Fatalf("Failed to start server: %v", err)
 	}
 }

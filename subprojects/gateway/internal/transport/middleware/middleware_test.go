@@ -2,10 +2,12 @@ package middleware
 
 import (
 	"bytes"
-	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 // TestChain ensures that middleware are executed in the correct order.
@@ -48,7 +50,11 @@ func TestChain(t *testing.T) {
 // TestLogging ensures the logging middleware writes the expected message.
 func TestLogging(t *testing.T) {
 	var buf bytes.Buffer
-	logger := log.New(&buf, "", 0)
+	logger := logrus.New()
+	logger.SetOutput(&buf)
+	logger.SetFormatter(&logrus.TextFormatter{
+		DisableTimestamp: true,
+	})
 
 	manager := NewManager(logger)
 
@@ -63,8 +69,8 @@ func TestLogging(t *testing.T) {
 
 	loggingHandler.ServeHTTP(w, req)
 
-	expectedLog := "received request: GET /testpath\n"
-	if buf.String() != expectedLog {
-		t.Errorf("Log message was incorrect, got: %q, want: %q", buf.String(), expectedLog)
+	expectedLog := `level=info msg="received request: GET /testpath"`
+	if !strings.Contains(buf.String(), expectedLog) {
+		t.Errorf("Log message was incorrect, got: %q, want to contain: %q", buf.String(), expectedLog)
 	}
 }
