@@ -5,8 +5,17 @@
 # The response will arrive in chunks as the model generates it.
 #
 
+# Fetch the JWT token first
+TOKEN=$(./resources/scripts/get_token.sh | tail -n 1)
+
+if [ -z "$TOKEN" ]; then
+    echo "Failed to get token. Exiting."
+    exit 1
+fi
+
 curl -i -N -X POST http://localhost:8080/v1/chat/completions \
 -H "Content-Type: application/json" \
+-H "Authorization: Bearer $TOKEN" \
 -d '{
   "model": "mockllm/mock-gpt-4",
   "messages": [
@@ -17,3 +26,4 @@ curl -i -N -X POST http://localhost:8080/v1/chat/completions \
   ],
   "stream": true
 }'
+

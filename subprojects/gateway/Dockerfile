@@ -10,7 +10,6 @@ RUN go mod download
 # Copy the source code
 COPY cmd/ cmd/
 COPY internal/ internal/
-COPY config.yaml ./
 
 # Build the application
 RUN go build -o /app/gateway cmd/gateway/main.go

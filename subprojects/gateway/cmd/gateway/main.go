@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"llm-gateway/internal/config"
 	"llm-gateway/internal/core"
@@ -43,8 +44,21 @@ func main() {
 
 	// 4a. Setup Transport Middleware (Pre-Forwarding)
 	transportMiddlewareManager := transportmw.NewManager(logger)
-	loggingMiddleware := transportMiddlewareManager.Logging
-	chainedHandler := transportmw.Chain(loggingMiddleware)(mux)
+
+	var middlewares []transportmw.Middleware
+	middlewares = append(middlewares, transportMiddlewareManager.Logging)
+
+	// Initialize OIDC Authenticator if enabled
+	if cfg.Auth.Enabled {
+		auth, err := transportmw.NewOIDCAuthenticator(context.Background(), logger, cfg.Auth.Issuer, cfg.Auth.Audience)
+		if err != nil {
+			logger.Fatalf("Failed to create OIDC authenticator: %v", err)
+		}
+		middlewares = append(middlewares, transportMiddlewareManager.Authentication(auth))
+		logger.Info("OIDC authentication enabled")
+	}
+
+	chainedHandler := transportmw.Chain(middlewares...)(mux)
 
 	serverAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	logger.Infof("Starting server on %s", serverAddr)

@@ -10,8 +10,15 @@ import (
 type Config struct {
 	Server     Server     `yaml:"server"`
 	Logging    Logging    `yaml:"logging"`
+	Auth       Auth       `yaml:"auth"`
 	Strategies []Strategy `yaml:"strategies"`
 	Providers  []Provider `yaml:"providers"`
+}
+
+type Auth struct {
+	Enabled  bool   `yaml:"enabled"`
+	Issuer   string `yaml:"issuer"`
+	Audience string `yaml:"audience"`
 }
 
 type Server struct {

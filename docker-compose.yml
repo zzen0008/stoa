@@ -10,11 +10,12 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
-      - ./resources/mock_config.yaml:/app/config.yaml
+      - ./resources/scripts/mock_config.yaml:/app/config.yaml
     networks:
       - llm_network
     depends_on:
-      - mockllm
+      mockllm:
+        condition: service_started
 
   mockllm:
     build:
@@ -22,6 +23,20 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8081:8081"
+    networks:
+      - llm_network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    command: start-dev --import-realm --health-enabled=true --metrics-enabled=true
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - FRONTEND_URL=http://localhost:8180
+    ports:
+      - "8180:8080"
+    volumes:
+      - ./resources/keycloak/realm-export.json:/opt/keycloak/data/import/realm.json
     networks:
       - llm_network
 
