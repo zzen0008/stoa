@@ -1,0 +1,18 @@
+# Binaries
+*.exe
+*.so
+*.dll
+
+# Build artifacts
+/bin
+/vendor
+
+# IDEs and OS files
+.idea
+.vscode
+*.swp
+*~
+.DS_Store
+
+# Log files
+*.log

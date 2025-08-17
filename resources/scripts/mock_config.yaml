@@ -1,0 +1,22 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+logging:
+  level: "info"
+
+# Defines routing strategies and provider groups
+strategies:
+  - name: "main_models"
+    # Fallback chain: try mockllm
+    providers: ["mockllm"] 
+
+# List of all available downstream LLM providers
+providers:
+
+  - name: "mockllm"
+    enabled: true
+    target_url: "http://mockllm:8081"
+    api_key: null
+    timeout: "60s"
+    max_retries: 1

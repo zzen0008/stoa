@@ -1,0 +1,12 @@
+# Go binaries
+./bin/*
+*.exe
+*.out
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/

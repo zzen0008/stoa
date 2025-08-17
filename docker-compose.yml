@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  gateway:
+    build:
+      context: ./subprojects/gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./resources/mock_config.yaml:/app/config.yaml
+    networks:
+      - llm_network
+    depends_on:
+      - mockllm
+
+  mockllm:
+    build:
+      context: ./subprojects/mockLLM
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    networks:
+      - llm_network
+
+networks:
+  llm_network:
+    driver: bridge
