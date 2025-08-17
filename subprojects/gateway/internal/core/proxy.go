@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	coremw "llm-gateway/internal/core/middleware"
 	"llm-gateway/internal/core/provider"
 	"llm-gateway/internal/core/router"
 	"log"
@@ -38,15 +39,17 @@ func modifyRequestBody(body []byte, providerName string) ([]byte, string, error)
 
 // Proxy is the core engine that handles request routing and proxying.
 type Proxy struct {
-	providerManager *provider.Manager
-	router          *router.Router
+	providerManager    *provider.Manager
+	router             *router.Router
+	responseMiddleware coremw.ResponseMiddleware
 }
 
 // NewProxy creates a new proxy.
-func NewProxy(pm *provider.Manager, r *router.Router) *Proxy {
+func NewProxy(pm *provider.Manager, r *router.Router, responseMiddleware coremw.ResponseMiddleware) *Proxy {
 	return &Proxy{
-		providerManager: pm,
-		router:          r,
+		providerManager:    pm,
+		router:             r,
+		responseMiddleware: responseMiddleware,
 	}
 }
 
@@ -106,6 +109,20 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				req.Host = targetURL.Host
 				req.URL.Path = path.Join(targetURL.Path, r.URL.Path) // Join paths
 				req.Header.Set("Authorization", "Bearer "+providerConfig.APIKey)
+			},
+			ModifyResponse: func(resp *http.Response) error {
+				if p.responseMiddleware == nil {
+					return nil
+				}
+				onCompletion, err := p.responseMiddleware(resp)
+				if err != nil {
+					// TODO: Should probably log this error.
+					return err
+				}
+				if onCompletion != nil {
+					resp.Body = coremw.NewStreamInterceptor(resp.Body, onCompletion)
+				}
+				return nil
 			},
 		}
 

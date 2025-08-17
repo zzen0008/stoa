@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"llm-gateway/internal/config"
 	"llm-gateway/internal/core"
+	coremw "llm-gateway/internal/core/middleware"
 	"llm-gateway/internal/core/provider"
 	"llm-gateway/internal/core/router"
 	"llm-gateway/internal/transport/handlers"
+	transportmw "llm-gateway/internal/transport/middleware"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -20,13 +23,16 @@ func main() {
 	}
 
 	// 2. Initialize Components
+	logger := log.New(os.Stdout, "", log.LstdFlags)
 	providerManager := provider.NewManager(cfg.Providers)
 	modelsCache := core.NewModelsCache()
 	coreRouter := router.NewRouter(cfg.Strategies)
-	proxy := core.NewProxy(providerManager, coreRouter)
+
+	// 2a. Setup Core Middleware (Post-Forwarding)
+	responseMiddleware := coremw.ElasticCompletionLogger
+	proxy := core.NewProxy(providerManager, coreRouter, responseMiddleware)
 
 	// 3. Start the Model Fetcher
-	// Refresh models every 10 minutes.
 	modelFetcher := core.NewModelFetcher(providerManager, modelsCache, 10*time.Minute)
 	modelFetcher.Start()
 	defer modelFetcher.Stop()
@@ -36,11 +42,16 @@ func main() {
 	mux := http.NewServeMux()
 	gatewayHandler.RegisterRoutes(mux)
 
+	// 4a. Setup Transport Middleware (Pre-Forwarding)
+	transportMiddlewareManager := transportmw.NewManager(logger)
+	loggingMiddleware := transportMiddlewareManager.Logging
+	chainedHandler := transportmw.Chain(loggingMiddleware)(mux)
+
 	serverAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("Starting server on %s", serverAddr)
 
 	// 5. Start the Server
-	if err := http.ListenAndServe(serverAddr, mux); err != nil {
+	if err := http.ListenAndServe(serverAddr, chainedHandler); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

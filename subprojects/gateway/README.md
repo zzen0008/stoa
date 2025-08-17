@@ -64,10 +64,53 @@ Example `curl` requests are available in the `/resources/scripts/` directory at 
 
 *   **Non-Streaming Request:**
     ```bash
-    /home/zz/projects/llm-gateway/resources/scripts/non_streaming_request.sh
+    ./resources/scripts/non_streaming_request.sh
     ```
 
 *   **Streaming Request:**
     ```bash
-    /home/zz/projects/llm-gateway/resources/scripts/streaming_request.sh
+    ./resources/scripts/streaming_request.sh
     ```
+
+## Middleware
+
+The gateway features a two-part middleware system designed for extensibility, allowing for custom logic to be executed both before and after a request is proxied to a downstream provider. This design explicitly supports streaming responses.
+
+### 1. Transport Middleware (Pre-Forwarding)
+
+This middleware acts on the initial incoming HTTP request before any core gateway logic is executed. It uses the standard Go `func(http.Handler) http.Handler` pattern.
+
+*   **Purpose**: Ideal for cross-cutting concerns that don't depend on the downstream provider's response.
+    *   Request Logging
+    *   Authentication & Authorization
+    *   Rate Limiting
+    *   Request Header Manipulation
+*   **Location**: `internal/transport/middleware/`
+*   **How it Works**: A chain of middleware is applied to the main HTTP router in `cmd/gateway/main.go`. Each middleware in the chain wraps the next, allowing them to execute logic before and after the request is handled.
+
+### 2. Core Middleware (Post-Forwarding & Streaming-Aware)
+
+This middleware acts on the HTTP response received from the downstream provider *before* it is streamed back to the original client. It is specifically designed to handle streaming bodies correctly.
+
+*   **Purpose**: Ideal for logic that needs to inspect, modify, or act upon the provider's response.
+    *   Logging the final completion payload to a service like Elasticsearch.
+    *   Modifying response headers.
+    *   Transforming the response body (e.g., redacting sensitive information).
+*   **Location**: `internal/core/middleware/`
+*   **How it Works**:
+    1.  The core proxy's `ModifyResponse` hook is used to trigger the middleware.
+    2.  The middleware function receives the `*http.Response` and can inspect headers. It returns an `OnCompletionFunc`.
+    3.  To handle streams, the original response body is wrapped in a custom `StreamInterceptor`. This interceptor passes data directly to the client without delay.
+    4.  As the data is streamed, the interceptor buffers it internally. When the stream ends (`io.EOF`), it triggers the `OnCompletionFunc` with the complete buffered body, allowing for safe post-stream processing without blocking the client.
+
+### Adding New Middleware
+
+To add new middleware, follow the pattern in `cmd/gateway/main.go`:
+
+1.  **For Transport Middleware**:
+    *   Create your middleware function in the `internal/transport/middleware` package.
+    *   In `main.go`, add it to the `transportmw.Chain(...)`.
+
+2.  **For Core Middleware**:
+    *   Create your `ResponseMiddleware` function in the `internal/core/middleware` package.
+    *   In `main.go`, pass your function (or a chain of functions) when creating the `core.NewProxy`.

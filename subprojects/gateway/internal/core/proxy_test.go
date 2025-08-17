@@ -70,7 +70,7 @@ func TestProxyServeHTTPSuccess(t *testing.T) {
 	// 3. Initialize gateway components
 	providerManager := provider.NewManager(cfg.Providers)
 	coreRouter := router.NewRouter(cfg.Strategies)
-	proxy := NewProxy(providerManager, coreRouter)
+	proxy := NewProxy(providerManager, coreRouter, nil) // Pass nil for middleware
 
 	// 4. Create the incoming request to the gateway
 	requestBody := `{"model": "mock-provider/test-model", "messages": [{"role": "user", "content": "Hi"}]}`
