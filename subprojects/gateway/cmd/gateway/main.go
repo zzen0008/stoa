@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"llm-gateway/internal/config"
 	"llm-gateway/internal/core"
@@ -50,10 +49,7 @@ func main() {
 
 	// Initialize OIDC Authenticator if enabled
 	if cfg.Auth.Enabled {
-		auth, err := transportmw.NewOIDCAuthenticator(context.Background(), logger, cfg.Auth.Issuer, cfg.Auth.Audience)
-		if err != nil {
-			logger.Fatalf("Failed to create OIDC authenticator: %v", err)
-		}
+		auth := transportmw.NewOIDCAuthenticator(logger, cfg.Auth.Issuer, cfg.Auth.Audience)
 		middlewares = append(middlewares, transportMiddlewareManager.Authentication(auth))
 		logger.Info("OIDC authentication enabled")
 	}
