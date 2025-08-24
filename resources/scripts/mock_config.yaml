@@ -7,7 +7,7 @@ logging:
   
 auth:
   enabled: true
-  issuer: "http://keycloak:8080/realms/llm-gateway-realm"
+  issuer: "http://keycloak:8180/realms/llm-gateway-realm"
   audience: "llm-gateway-client"
 # Defines routing strategies and provider groups
 strategies:

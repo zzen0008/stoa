@@ -3,7 +3,7 @@
 # This script fetches a JWT from the Keycloak instance running in Docker.
 
 # Keycloak server details
-KEYCLOAK_URL="http://localhost:8180"
+KEYCLOAK_URL="http://keycloak:8180"
 REALM="llm-gateway-realm"
 CLIENT_ID="llm-gateway-client"
 CLIENT_SECRET="**********" # IMPORTANT: Replace with the actual secret from the Keycloak UI
