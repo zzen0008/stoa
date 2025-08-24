@@ -90,6 +90,22 @@ func (m *Manager) Authentication(auth *OIDCAuthenticator) Middleware {
 				return
 			}
 
+			// Define a struct to hold your custom claims.
+			// Ensure your OIDC provider is configured to include 'groups' in the token.
+			var claims struct {
+				Groups []string `json:"groups"`
+			}
+			if err := idToken.Claims(&claims); err != nil {
+				auth.logger.Errorf("failed to parse custom claims: %v", err)
+				http.Error(w, "Failed to parse token claims", http.StatusUnauthorized)
+				return
+			}
+
+			// Store the user's groups in the request context for downstream middleware.
+			ctxWithGroups := context.WithValue(r.Context(), "user_groups", claims.Groups)
+			r = r.WithContext(ctxWithGroups)
+
+
 			// Token is valid, you can access claims from idToken if needed
 			auth.logger.Infof("successfully authenticated user: %s", idToken.Subject)
 

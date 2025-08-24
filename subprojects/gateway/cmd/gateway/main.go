@@ -52,6 +52,11 @@ func main() {
 		auth := transportmw.NewOIDCAuthenticator(logger, cfg.Auth.Issuer, cfg.Auth.Audience, cfg.Auth.CacheTTL)
 		middlewares = append(middlewares, transportMiddlewareManager.Authentication(auth))
 		logger.Info("OIDC authentication enabled")
+
+		// Add the Authorization middleware right after Authentication
+		authz := transportmw.NewAuthorizer(logger, cfg.Providers)
+		middlewares = append(middlewares, transportMiddlewareManager.Authorization(authz))
+		logger.Info("Model authorization enabled")
 	}
 
 	chainedHandler := transportmw.Chain(middlewares...)(mux)

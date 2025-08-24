@@ -43,6 +43,12 @@ type Provider struct {
 	APIKey     string        `yaml:"api_key"`
 	Timeout    time.Duration `yaml:"timeout"`
 	MaxRetries int           `yaml:"max_retries"`
+	Models     []Model       `yaml:"models"`
+}
+
+type Model struct {
+	Name          string   `yaml:"name"`
+	AllowedGroups []string `yaml:"allowed_groups"`
 }
 
 // Load reads the configuration file from the given path, parses it, and returns a Config struct.
