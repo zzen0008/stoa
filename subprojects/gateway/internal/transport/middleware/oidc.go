@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/sirupsen/logrus"
@@ -12,34 +13,50 @@ import (
 
 // OIDCAuthenticator is a struct that holds the OIDC provider and verifier.
 type OIDCAuthenticator struct {
-	issuerURL string
-	clientID  string
-	logger    *logrus.Logger
-
-	initOnce sync.Once
-	verifier *oidc.IDTokenVerifier
-	initErr  error
+	issuerURL    string
+	clientID     string
+	logger       *logrus.Logger
+	cacheTTL     time.Duration
+	verifier     *oidc.IDTokenVerifier
+	verifierMu   sync.RWMutex
+	lastVerified time.Time
 }
 
 // NewOIDCAuthenticator creates a new OIDC authenticator.
-func NewOIDCAuthenticator(logger *logrus.Logger, issuerURL, clientID string) *OIDCAuthenticator {
+func NewOIDCAuthenticator(logger *logrus.Logger, issuerURL, clientID string, cacheTTL time.Duration) *OIDCAuthenticator {
 	return &OIDCAuthenticator{
 		issuerURL: issuerURL,
 		clientID:  clientID,
 		logger:    logger,
+		cacheTTL:  cacheTTL,
 	}
 }
 
 func (a *OIDCAuthenticator) getVerifier(ctx context.Context) (*oidc.IDTokenVerifier, error) {
-	a.initOnce.Do(func() {
-		provider, err := oidc.NewProvider(ctx, a.issuerURL)
-		if err != nil {
-			a.initErr = err
-			return
-		}
-		a.verifier = provider.Verifier(&oidc.Config{ClientID: a.clientID})
-	})
-	return a.verifier, a.initErr
+	a.verifierMu.RLock()
+	if a.verifier != nil && time.Since(a.lastVerified) < a.cacheTTL {
+		a.verifierMu.RUnlock()
+		return a.verifier, nil
+	}
+	a.verifierMu.RUnlock()
+
+	a.verifierMu.Lock()
+	defer a.verifierMu.Unlock()
+
+	// Double check if another goroutine has already refreshed the verifier
+	if a.verifier != nil && time.Since(a.lastVerified) < a.cacheTTL {
+		return a.verifier, nil
+	}
+
+	provider, err := oidc.NewProvider(ctx, a.issuerURL)
+	if err != nil {
+		return nil, err
+	}
+	verifier := provider.Verifier(&oidc.Config{ClientID: a.clientID})
+	a.verifier = verifier
+	a.lastVerified = time.Now()
+
+	return a.verifier, nil
 }
 
 // Authentication is the middleware handler for OIDC authentication.

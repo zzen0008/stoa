@@ -16,9 +16,10 @@ type Config struct {
 }
 
 type Auth struct {
-	Enabled  bool   `yaml:"enabled"`
-	Issuer   string `yaml:"issuer"`
-	Audience string `yaml:"audience"`
+	Enabled  bool          `yaml:"enabled"`
+	Issuer   string        `yaml:"issuer"`
+	Audience string        `yaml:"audience"`
+	CacheTTL time.Duration `yaml:"cache_ttl"`
 }
 
 type Server struct {

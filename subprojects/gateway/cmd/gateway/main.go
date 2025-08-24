@@ -49,7 +49,7 @@ func main() {
 
 	// Initialize OIDC Authenticator if enabled
 	if cfg.Auth.Enabled {
-		auth := transportmw.NewOIDCAuthenticator(logger, cfg.Auth.Issuer, cfg.Auth.Audience)
+		auth := transportmw.NewOIDCAuthenticator(logger, cfg.Auth.Issuer, cfg.Auth.Audience, cfg.Auth.CacheTTL)
 		middlewares = append(middlewares, transportMiddlewareManager.Authentication(auth))
 		logger.Info("OIDC authentication enabled")
 	}

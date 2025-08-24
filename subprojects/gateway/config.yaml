@@ -9,6 +9,7 @@ auth:
   enabled: true
   issuer: "http://keycloak:8080/realms/llm-gateway-realm"
   audience: "llm-gateway-client"
+  cache_ttl: "30s"
 
 # Defines routing strategies and provider groups
 strategies:
