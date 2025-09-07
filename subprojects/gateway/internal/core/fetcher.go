@@ -7,6 +7,7 @@ import (
 	"llm-gateway/internal/config"
 	"llm-gateway/internal/core/provider"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -57,11 +58,17 @@ func (mf *ModelFetcher) Stop() {
 func (mf *ModelFetcher) fetchAllModels() {
 	logrus.Println("Fetching models from all providers...")
 	providers := mf.providerManager.GetAllProviderConfigs()
+	var wg sync.WaitGroup
 	for _, p := range providers {
 		if p.Enabled {
-			go mf.fetchModelsForProvider(p)
+			wg.Add(1)
+			go func(p config.Provider) {
+				defer wg.Done()
+				mf.fetchModelsForProvider(p)
+			}(p)
 		}
 	}
+	wg.Wait()
 }
 
 func (mf *ModelFetcher) fetchModelsForProvider(p config.Provider) {

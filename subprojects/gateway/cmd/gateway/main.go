@@ -54,7 +54,7 @@ func main() {
 		logger.Info("OIDC authentication enabled")
 
 		// Add the Authorization middleware right after Authentication
-		authz := transportmw.NewAuthorizer(logger, cfg.Providers)
+		authz := transportmw.NewAuthorizer(logger, cfg.Providers, modelsCache)
 		middlewares = append(middlewares, transportMiddlewareManager.Authorization(authz))
 		logger.Info("Model authorization enabled")
 	}
