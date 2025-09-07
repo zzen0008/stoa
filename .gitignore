@@ -6,6 +6,7 @@
 # Build artifacts
 /bin
 /vendor
+**/bin/
 
 # IDEs and OS files
 .idea
@@ -16,3 +17,6 @@
 
 # Log files
 *.log
+
+# Python
+__pycache__/
