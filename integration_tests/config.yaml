@@ -1,0 +1,23 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+logging:
+  level: "debug"
+
+auth:
+  enabled: true
+  issuer: "http://keycloak:8080/realms/llm-test-realm"
+  audience: "llm-gateway-client"
+  cache_ttl: "10s"
+
+strategies:
+  - name: "main_models"
+    providers: ["mockllm"]
+
+providers:
+  - name: "mockllm"
+    enabled: true
+    target_url: "http://mockllm:8081"
+    timeout: "60s"
+    max_retries: 1

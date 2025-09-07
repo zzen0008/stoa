@@ -1,0 +1,49 @@
+services:
+  gateway:
+    build:
+      context: ../subprojects/gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+    networks:
+      - llm_test_network
+    depends_on:
+      - mockllm
+      - keycloak
+
+  mockllm:
+    build:
+      context: ../subprojects/mockLLM
+      dockerfile: Dockerfile
+    networks:
+      - llm_test_network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    command: start-dev --import-realm
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    ports:
+      - "8180:8080"
+    volumes:
+      - ./keycloak_config/realm.json:/opt/keycloak/data/import/realm.json
+    networks:
+      - llm_test_network
+
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
+    volumes:
+      - ./tests:/app/tests
+    networks:
+      - llm_test_network
+    depends_on:
+      - gateway
+
+networks:
+  llm_test_network:
+    driver: bridge

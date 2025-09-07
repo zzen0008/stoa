@@ -1,0 +1,7 @@
+pytest
+pytest-docker
+openai
+requests
+python-keycloak
+PyJWT
+cryptography
