@@ -11,6 +11,7 @@ type Config struct {
 	Server     Server     `yaml:"server"`
 	Logging    Logging    `yaml:"logging"`
 	Auth       Auth       `yaml:"auth"`
+	RateLimit  RateLimit  `yaml:"ratelimit"`
 	Strategies []Strategy `yaml:"strategies"`
 	Providers  []Provider `yaml:"providers"`
 }
@@ -29,6 +30,20 @@ type Server struct {
 
 type Logging struct {
 	Level string `yaml:"level"`
+}
+
+type RateLimit struct {
+	Enabled      bool                `yaml:"enabled"`
+	Backend      string              `yaml:"backend"`
+	RedisAddress string              `yaml:"redis_address"`
+	Default      RateLimitConfig     `yaml:"default"`
+	Groups       map[string]RateLimitConfig `yaml:"groups"`
+}
+
+type RateLimitConfig struct {
+	Name     string        `yaml:"name"`
+	Requests int64         `yaml:"requests"`
+	Window   time.Duration `yaml:"window"`
 }
 
 type Strategy struct {

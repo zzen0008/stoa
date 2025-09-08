@@ -7,28 +7,41 @@ logging:
 
 auth:
   enabled: true
-  issuer: "http://keycloak:8080/realms/llm-gateway-realm"
-  audience: "llm-gateway-client"
-  cache_ttl: "30s"
+  issuer: "http://localhost:8081/realms/myrealm"
+  audience: "account"
+  cache_ttl: "10m"
 
-# Defines routing strategies and provider groups
+ratelimit:
+  enabled: true
+  backend: "redis" # or "memory"
+  redis_address: "localhost:6379"
+  default:
+    requests: 100
+    window: "1m"
+  groups:
+    "testgroup":
+      name: "testgroup"
+      requests: 5
+      window: "1m"
+    "premium-users":
+      name: "premium-users"
+      requests: 1000
+      window: "1h"
+
 strategies:
-  - name: "main_models"
-    # Fallback chain: try mockllm
-    providers: ["mockllm"] 
+  - name: "default"
+    providers:
+      - "openai"
 
-# List of all available downstream LLM providers
 providers:
   - name: "openai"
-    enabled: false
-    target_url: "https://api.openai.com"
-    api_key: "${OPENAI_API_KEY}"
-    timeout: "30s"
-    max_retries: 3
-
-  - name: "mockllm"
     enabled: true
-    target_url: "http://mockllm:8081"
-    api_key: null
-    timeout: "60s"
-    max_retries: 1
+    target_url: "http://mock-llm:8080"
+    api_key: "${OPENAI_API_KEY}"
+    timeout: 60s
+    max_retries: 3
+    models:
+      - name: "gpt-4"
+        allowed_groups: ["testgroup", "premium-users"]
+      - name: "gpt-3.5-turbo"
+        allowed_groups: ["testgroup"]

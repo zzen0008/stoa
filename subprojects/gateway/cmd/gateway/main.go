@@ -8,6 +8,7 @@ import (
 	"llm-gateway/internal/core/provider"
 	"llm-gateway/internal/core/router"
 	"llm-gateway/internal/logging"
+	"llm-gateway/internal/ratelimit"
 	"llm-gateway/internal/transport/handlers"
 	transportmw "llm-gateway/internal/transport/middleware"
 	"net/http"
@@ -57,6 +58,23 @@ func main() {
 		authz := transportmw.NewAuthorizer(logger, cfg.Providers, modelsCache)
 		middlewares = append(middlewares, transportMiddlewareManager.Authorization(authz))
 		logger.Info("Model authorization enabled")
+	}
+
+	// Initialize Rate Limiter if enabled
+	if cfg.RateLimit.Enabled {
+		var store ratelimit.RateLimiterStore
+		switch cfg.RateLimit.Backend {
+		case "redis":
+			store = ratelimit.NewRedisStore(cfg.RateLimit.RedisAddress)
+			logger.Info("Rate limiting enabled with redis backend")
+		case "memory":
+			store = ratelimit.NewMemoryStore()
+			logger.Info("Rate limiting enabled with memory backend")
+		default:
+			logger.Warnf("Unknown rate limit backend '%s', defaulting to in-memory", cfg.RateLimit.Backend)
+			store = ratelimit.NewMemoryStore()
+		}
+		middlewares = append(middlewares, transportMiddlewareManager.RateLimiter(store, cfg.RateLimit))
 	}
 
 	chainedHandler := transportmw.Chain(middlewares...)(mux)
