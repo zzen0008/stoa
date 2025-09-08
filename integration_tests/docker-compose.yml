@@ -12,6 +12,7 @@ services:
     depends_on:
       - mockllm
       - keycloak
+      - redis
 
   mockllm:
     build:
@@ -30,6 +31,11 @@ services:
       - "8180:8080"
     volumes:
       - ./keycloak_config/realm.json:/opt/keycloak/data/import/realm.json
+    networks:
+      - llm_test_network
+
+  redis:
+    image: redis:alpine
     networks:
       - llm_test_network
 

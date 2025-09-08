@@ -11,6 +11,19 @@ auth:
   audience: "llm-gateway-client"
   cache_ttl: "10s"
 
+ratelimit:
+  enabled: true
+  backend: "redis"
+  redis_address: "redis:6379"
+  default:
+    requests: 100
+    window: "1m"
+  groups:
+    "testgroup":
+      name: "testgroup"
+      requests: 3 # Low limit for easy testing
+      window: "1m"
+
 strategies:
   - name: "main_models"
     providers: ["mockllm"]
@@ -21,3 +34,6 @@ providers:
     target_url: "http://mockllm:8081"
     timeout: "60s"
     max_retries: 1
+    models:
+      - name: "mock-gpt-3.5-turbo"
+        allowed_groups: ["testgroup"]
