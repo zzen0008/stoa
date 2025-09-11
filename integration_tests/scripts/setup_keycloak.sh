@@ -27,6 +27,19 @@ run_kcadm() {
 # Login to the admin CLI
 run_kcadm config credentials --server $KEYCLOAK_INTERNAL_URL --realm master --user $ADMIN_USER --password $ADMIN_PASSWORD
 
+# Create token-app client if it doesn't exist
+echo "Ensuring client 'token-app' exists..."
+TOKEN_APP_CLIENT_ID=$(run_kcadm get clients -r $REALM_NAME -q clientId=token-app --fields id --format csv --noquotes 2>/dev/null || true)
+if [ -z "$TOKEN_APP_CLIENT_ID" ]; then
+    run_kcadm create clients -r $REALM_NAME \
+        -s clientId=token-app \
+        -s enabled=true \
+        -s publicClient=true \
+        -s 'redirectUris=["http://localhost:8501/oauth2callback"]' \
+        -s directAccessGrantsEnabled=false
+    echo "Client 'token-app' created."
+fi
+
 # Create client if it doesn't exist
 echo "Ensuring client '$CLIENT_NAME' exists..."
 CLIENT_ID=$(run_kcadm get clients -r $REALM_NAME -q clientId=$CLIENT_NAME --fields id --format csv --noquotes 2>/dev/null || true)
@@ -60,6 +73,7 @@ if [ -z "$CLIENT_ID" ]; then
         -s 'config."access.token.claim"="true"' \
         -s 'config."userinfo.token.claim"="true"'
 fi
+
 
 # Delete user if exists to ensure a clean state
 echo "Deleting user 'testuser' if it exists..."

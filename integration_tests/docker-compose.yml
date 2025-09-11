@@ -39,6 +39,22 @@ services:
     networks:
       - llm_test_network
 
+  token-app:
+    build:
+      context: ../subprojects/token-app
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      - TOKEN_APP_SERVER_METADATA_URL=http://localhost:8180/realms/llm-test-realm/.well-known/openid-configuration
+      - TOKEN_APP_CLIENT_ID=token-app
+      - TOKEN_APP_REDIRECT_URI=http://localhost:8501/oauth2callback
+      - TOKEN_APP_COOKIE_SECRET=a-super-secret-cookie-key-for-testing
+    networks:
+      - llm_test_network
+    depends_on:
+      - keycloak
+
   tests:
     build:
       context: .
