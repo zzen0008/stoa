@@ -3,7 +3,7 @@
 set -e
 
 # Variables
-KEYCLOAK_EXTERNAL_URL="http://localhost:8180"
+KEYCLOAK_EXTERNAL_URL="http://localhost:8080"
 KEYCLOAK_INTERNAL_URL="http://localhost:8080"
 ADMIN_USER="admin"
 ADMIN_PASSWORD="admin"
@@ -31,13 +31,25 @@ run_kcadm config credentials --server $KEYCLOAK_INTERNAL_URL --realm master --us
 echo "Ensuring client 'token-app' exists..."
 TOKEN_APP_CLIENT_ID=$(run_kcadm get clients -r $REALM_NAME -q clientId=token-app --fields id --format csv --noquotes 2>/dev/null || true)
 if [ -z "$TOKEN_APP_CLIENT_ID" ]; then
-    run_kcadm create clients -r $REALM_NAME \
+    TOKEN_APP_CLIENT_ID=$(run_kcadm create clients -r $REALM_NAME \
         -s clientId=token-app \
         -s enabled=true \
         -s publicClient=true \
-        -s 'redirectUris=["http://localhost:8501/oauth2callback"]' \
-        -s directAccessGrantsEnabled=false
-    echo "Client 'token-app' created."
+        -s 'redirectUris=["http://localhost:8501/*"]' \
+        -s directAccessGrantsEnabled=false -i)
+    echo "Client 'token-app' created. Adding email protocol mapper..."
+    
+    # Add email mapper to the token-app client
+    run_kcadm create clients/$TOKEN_APP_CLIENT_ID/protocol-mappers/models -r $REALM_NAME \
+        -s name=email-mapper \
+        -s protocol=openid-connect \
+        -s protocolMapper=oidc-usermodel-property-mapper \
+        -s 'config."user.attribute"="email"' \
+        -s 'config."claim.name"="email"' \
+        -s 'config."jsonType.label"="String"' \
+        -s 'config."id.token.claim"="true"' \
+        -s 'config."access.token.claim"="true"' \
+        -s 'config."userinfo.token.claim"="true"'
 fi
 
 # Create client if it doesn't exist
@@ -84,11 +96,12 @@ if [ -n "$USER_ID" ]; then
 fi
 
 # Create user
-echo "Creating user 'testuser'வுகளை..."
+echo "Creating user 'testuser'..."
 USER_ID=$(run_kcadm create users -r $REALM_NAME \
     -s username=testuser \
     -s enabled=true \
     -s emailVerified=true \
+    -s email=testuser@example.com \
     -s 'credentials=[{"type":"password","value":"test","temporary":false}]' -i)
 echo "User 'testuser' created with ID: $USER_ID"
 

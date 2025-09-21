@@ -4,7 +4,7 @@ services:
       context: ../subprojects/gateway
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8088:8080"
     volumes:
       - ./config.yaml:/app/config.yaml
     networks:
@@ -28,7 +28,7 @@ services:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
     ports:
-      - "8180:8080"
+      - "8080:8080"
     volumes:
       - ./keycloak_config/realm.json:/opt/keycloak/data/import/realm.json
     networks:
@@ -46,10 +46,16 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - TOKEN_APP_SERVER_METADATA_URL=http://localhost:8180/realms/llm-test-realm/.well-known/openid-configuration
-      - TOKEN_APP_CLIENT_ID=token-app
-      - TOKEN_APP_REDIRECT_URI=http://localhost:8501/oauth2callback
-      - TOKEN_APP_COOKIE_SECRET=a-super-secret-cookie-key-for-testing
+      - AUTHORIZE_URL=http://keycloak:8080/realms/llm-test-realm/protocol/openid-connect/auth
+      - TOKEN_URL=http://keycloak:8080/realms/llm-test-realm/protocol/openid-connect/token
+      - REFRESH_TOKEN_URL=http://keycloak:8080/realms/llm-test-realm/protocol/openid-connect/token
+      - REVOKE_TOKEN_URL=http://keycloak:8080/realms/llm-test-realm/protocol/openid-connect/logout
+      - CLIENT_ID=token-app
+      - CLIENT_SECRET=""
+      - REDIRECT_URI=http://localhost:8501
+      - SCOPE=openid profile email
+    volumes:
+      - ../subprojects/token-app/.streamlit/secrets.toml:/app/.streamlit/secrets.toml
     networks:
       - llm_test_network
     depends_on:
